@@ -1,0 +1,94 @@
+title:  BDD, Behat, Mink and other Wonderful Things
+
+summary: |
+    **Looking for Behat v2.5 of the tutorial?** See https://knpuniversity.com/screencast/behat-v25.
+
+    Behat is my absolute favorite library to use. First, it let's me think about the *behavior*
+    of my features first, *before* I start developing. In this tutorial, we'll do that, and it'll
+    change the way you develop. Second, Behat turns that written behavior into functional tests
+    against your application. Does your feature behave correctly? Just run the automated robots
+    to find out!
+    
+    Along the way, we'll master Mink - the partner library to Behat - and solve all sorts of common
+    problems, like:
+    
+    * Running scenarios in a real browser
+    * Properly waiting or JavaScript events
+    * Leveraging Behat hooks
+    * Multiple contexts
+    * Loading Database fixtures and clearing data
+    * Bootstrapping your application (specifically Symfony)
+    * Using the authenticated user
+    * Tagging scenarios
+    * How to put BDD into practice
+    * Keeping the velociraptors in their pen.
+
+    Let's do this!
+
+illustration: behatv3.png
+
+tuts_hero:
+    start_step: start
+    finish_step: tags-adding-fixtures-code
+
+chapters:
+    install:
+        is_free:    true
+        video_key:  141808753
+    bdd-features:
+        video_key: 141809968
+        is_free:   true
+        challenges:
+            - Challenges\BddFeatures\RegistrationFeatureCoding
+            - Challenges\BddFeatures\BestBusinessValueMC
+    scenarios:
+        video_key: 141828388
+        challenges:
+            - Challenges\Scenarios\RegistrationScenarioCoding
+            - Challenges\Scenarios\BadScenarioMC
+    using-behat:
+        video_key: 141829491
+        challenges:
+#            - Challenges\UsingBehat\LsFeatureCoding
+            - Challenges\UsingBehat\IndependentScenariosMC
+    behat-hooks-background:
+        video_key: 142297771
+        challenges:
+            - Challenges\BehatHooksBackground\afterStepHookCoding
+            # - Challenges\BehatHooksBackground\CheckStepTestResultCoding
+    using-mink:
+        video_key: 142399553
+    finding-elements:
+        video_key: 142412310
+    behat-loves-mink:
+        video_key: 143767732
+    scenario-outline:
+        video_key: 143768787
+    mink-inside-feature-context:
+        video_key: 143887590
+    suites:
+        video_key: 143890121
+    login-scenario:
+        video_key: 144511790
+    control-database:
+        video_key: 144513120
+    clear-data-symfony-extension:
+        video_key: 144516203
+    practicing-finding-debugging:
+        video_key: 144518957
+    get-authenticated-user:
+        video_key: 144520919
+    practicing-bdd:
+        video_key: 144635274
+    javascript-waiting:
+        video_key: 144547199
+    javascript-debugging-screenshots:
+        video_key: 145892765
+    tables:
+        video_key: 145898504
+    html-tables:
+        video_key: 145899152
+    complex-delete:
+        video_key: 145878458
+    fixtures-tags:
+        video_key: 145661027
