@@ -12,7 +12,7 @@ $driver= new Selenium2Driver('chrome');
 $session = new Session($driver);
 $session->start();
 
-$session->visit('https://jurassicpark.fandom.com/wiki/Jurassic_Park_Wiki');
+$session->visit('http://localhost:8000/');
 
 //var_dump($session->getStatusCode(), $session->getCurrentUrl());
 
@@ -22,9 +22,8 @@ $page = $session->getPage();
 //var_dump(substr($page->getText(), 0, 75));
 
 //NodeElement
-$header = $page->find('css', 'header nav ul');
 $selectorsHandler = $session->getSelectorsHandler();
-$linkEl = $page->findLink('Books');
+$linkEl = $page->findLink('KnpUniversity.com');
 $url = $linkEl->getAttribute('href');
 
 $linkEl->click();
