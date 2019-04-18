@@ -9,7 +9,7 @@ require_once __DIR__ .'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functi
 /**
  * Defines application features from the specific context.
  */
-class FeatureContext extends MinkContext implements Context
+class FeatureContext  implements Context
 {
     private $output;
 

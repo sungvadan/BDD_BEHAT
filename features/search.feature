@@ -3,9 +3,14 @@ Feature: Search
   As a web user
   I need to be able to search for products
 
-  @javascript
-  Scenario: Searching for a product that exists
-    Given I am on homepage
-    When I fill in "searchTerm" with "Samsung"
+  Background:
+    Given I am on "/"
+
+  Scenario Outline:
+    When I fill in "searchTerm" with "<term>"
     And I press "search_submit"
-    Then I should see "Samsung Galaxy"
+    Then I should see "<result>"
+    Examples:
+      | term    | result            |
+      | Samsung | Samsung Galaxy    |
+      | xbox    | No products found |

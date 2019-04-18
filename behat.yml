@@ -5,3 +5,9 @@ default:
             goutte: ~
             selenium2:
                 browser: chrome
+
+    suites:
+        default:
+            contexts:
+                - FeatureContext
+                - Behat\MinkExtension\Context\MinkContext
