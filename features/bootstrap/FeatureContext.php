@@ -1,5 +1,6 @@
 <?php
 
+use AppBundle\Entity\User;
 use Behat\Behat\Context\Context;
 use Behat\MinkExtension\Context\RawMinkContext;
 
@@ -9,7 +10,7 @@ require_once __DIR__ .'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functi
  */
 class FeatureContext extends RawMinkContext implements Context
 {
-    private $output;
+    private static $container;
 
     /**
      * Initializes context.
@@ -22,6 +23,37 @@ class FeatureContext extends RawMinkContext implements Context
     {
 
     }
+
+    /**
+     * @BeforeSuite
+     */
+    public static function bootstrapSymfony()
+    {
+        require __DIR__.'/../../app/autoload.php';
+        require __DIR__.'/../../app/AppKernel.php';
+
+        $kernel = new AppKernel('test', true);
+        $kernel->boot();
+
+        self::$container = $kernel->getContainer();
+
+    }
+
+    /**
+     * @Given there is an admin user :userName with password :password
+     */
+    public function thereIsAnAdminUserWithPassword($userName, $password)
+    {
+        $user = new User();
+        $user->setUsername($userName);
+        $user->setPlainPassword($password);
+        $user->setRoles(array('ROLE_ADMIN'));
+
+        $em = self::$container->get('doctrine')->getManager();
+        $em->persist($user);
+        $em->flush();
+    }
+
 
     /**
      * @When I fill in search box with :term
