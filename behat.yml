@@ -6,6 +6,8 @@ default:
             selenium2:
                 browser: chrome
 
+        Behat\Symfony2Extension:
+
     suites:
         default:
             contexts:
