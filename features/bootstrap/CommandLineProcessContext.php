@@ -1,61 +1,28 @@
 <?php
 
 use Behat\Behat\Context\Context;
-use Behat\MinkExtension\Context\RawMinkContext;
+use Behat\Behat\Context\SnippetAcceptingContext;
+use Behat\Gherkin\Node\PyStringNode;
+use Behat\Gherkin\Node\TableNode;
 
-require_once __DIR__ .'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functions.php';
-/**
- * Defines application features from the specific context.
- */
-class CommandLineProcessContext implements Context
+require_once __DIR__.'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functions.php';
+
+class CommandLineProcessContext implements Context, SnippetAcceptingContext
 {
     private $output;
 
     /**
-     * Initializes context.
-     *
-     * Every scenario gets its own context instance.
-     * You can also pass arbitrary arguments to the
-     * context constructor through behat.yml.
+     * @Given I have a file named :filename
      */
-    public function __construct()
+    public function iHaveAFileNamed($filename)
     {
-
+        touch($filename);
     }
 
     /**
-     * @BeforeScenario
+     * @When I run :command
      */
-    public function moveIntoTestDir()
-    {
-        mkdir('test');
-        chdir('test');
-    }
-
-    /**
-     * @AfterScenario
-     */
-    public function moveOutDirTest()
-    {
-        chdir('..');
-        if (is_dir('test')) {
-           system('rm -r '.realpath('test'));
-        }
-    }
-
-
-    /**
-     * @Given There is a file named :name
-     */
-    public function thereIsAFileNamed($name)
-    {
-        touch($name);
-    }
-
-    /**
-     * @When I run command :command
-     */
-    public function iRunCommand($command)
+    public function iRun($command)
     {
         $this->output = shell_exec($command);
     }
@@ -66,16 +33,38 @@ class CommandLineProcessContext implements Context
     public function iShouldSeeInTheOutput($string)
     {
         assertContains(
-          $string,
-          $this->output,
-          sprintf('the file %s is not found in the output %s ', $string, $this->output)
+            $string,
+            $this->output,
+            sprintf('Did not see "%s" in output "%s"', $string, $this->output)
         );
     }
 
     /**
-     * @Given There is a dir named :dir
+     * @BeforeScenario
      */
-    public function thereIsADirNamed($dir)
+    public function moveIntoTestDir()
+    {
+        if (!is_dir('test')) {
+            mkdir('test');
+        }
+        chdir('test');
+    }
+
+    /**
+     * @AfterScenario
+     */
+    public function moveOutOfTestDir()
+    {
+        chdir('..');
+        if (is_dir('test')) {
+            system('rm -r '.realpath('test'));
+        }
+    }
+
+    /**
+     * @Given I have a dir named :dir
+     */
+    public function iHaveADirNamed($dir)
     {
         mkdir($dir);
     }

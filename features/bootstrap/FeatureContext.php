@@ -3,19 +3,25 @@
 use AppBundle\Entity\Product;
 use AppBundle\Entity\User;
 use Behat\Behat\Context\Context;
-use Behat\MinkExtension\Context\MinkContext;
-use Behat\Symfony2Extension\Context\KernelDictionary;
+use Behat\Behat\Context\SnippetAcceptingContext;
+use Behat\Gherkin\Node\PyStringNode;
+use Behat\Gherkin\Node\TableNode;
+use Behat\MinkExtension\Context\RawMinkContext;
+use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
 use Doctrine\Common\DataFixtures\Purger\ORMPurger;
+use Symfony\Bridge\Doctrine\DataFixtures\ContainerAwareLoader;
 
-require_once __DIR__ .'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functions.php';
+require_once __DIR__.'/../../vendor/phpunit/phpunit/src/Framework/Assert/Functions.php';
+
 /**
  * Defines application features from the specific context.
  */
-class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements Context
+class FeatureContext extends RawMinkContext implements Context, SnippetAcceptingContext
 {
-    use KernelDictionary;
+    use \Behat\Symfony2Extension\Context\KernelDictionary;
 
     private $currentUser;
+
     /**
      * Initializes context.
      *
@@ -25,17 +31,35 @@ class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements
      */
     public function __construct()
     {
-
     }
 
+    /**
+     * @BeforeScenario
+     */
+    public function clearData()
+    {
+        $purger = new ORMPurger($this->getContainer()->get('doctrine')->getManager());
+        $purger->purge();
+    }
 
     /**
-     * @Given there is an admin user :userName with password :password
+     * @BeforeScenario @fixtures
      */
-    public function thereIsAnAdminUserWithPassword($userName, $password)
+    public function loadFixtures()
     {
-        $user = new User();
-        $user->setUsername($userName);
+        $loader = new ContainerAwareLoader($this->getContainer());
+        $loader->loadFromDirectory(__DIR__.'/../../src/AppBundle/DataFixtures');
+        $executor = new ORMExecutor($this->getEntityManager());
+        $executor->execute($loader->getFixtures(), true);
+    }
+
+    /**
+     * @Given there is an admin user :username with password :password
+     */
+    public function thereIsAnAdminUserWithPassword($username, $password)
+    {
+        $user = new \AppBundle\Entity\User();
+        $user->setUsername($username);
         $user->setPlainPassword($password);
         $user->setRoles(array('ROLE_ADMIN'));
 
@@ -47,27 +71,12 @@ class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements
     }
 
     /**
-     * @BeforeScenario
+     * @When I fill in the search box with :term
      */
-    public function clearData()
+    public function iFillInTheSearchBoxWith($term)
     {
-        $em = $this->getContainer()->get('doctrine')->getManager();
-        $purger = new ORMPurger($em);
-        $purger->purge();
-
-    }
-
-    /**
-     * @When I fill in search box with :term
-     */
-    public function iFillInSearchBoxWith($term)
-    {
-        // name = "searchTerm"
-        $searchBox =$this->getSession()
-            ->getPage()
-            ->find('css', '[name="searchTerm"]');
-
-        assertNotNull($searchBox, 'The search box was not found');
+        $searchBox = $this->assertSession()
+            ->elementExists('css', 'input[name="searchTerm"]');
 
         $searchBox->setValue($term);
     }
@@ -77,30 +86,18 @@ class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements
      */
     public function iPressTheSearchButton()
     {
-        $searchBox =$this->getSession()
-            ->getPage()
-            ->find('css', '#search_submit');
+        $button = $this->assertSession()
+            ->elementExists('css', '#search_submit');
 
-        assertNotNull($searchBox, 'The search button was not found');
-
-        $searchBox->press();
+        $button->press();
     }
 
-
     /**
-     * @Given there are :count products
+     * @Given there is/are :count product(s)
      */
     public function thereAreProducts($count)
     {
-        $em = $this->getContainer()->get('doctrine')->getManager();
-        for ($i = 0; $i < $count; $i++ ) {
-            $product = new Product();
-            $product->setName('Product '.$i);
-            $product->setPrice(rand(10,100));
-            $product->setDescription('lorem');
-            $em->persist($product);
-        }
-        $em->flush();
+        $this->createProducts($count);
     }
 
     /**
@@ -108,24 +105,54 @@ class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements
      */
     public function iAuthorProducts($count)
     {
-        $em = $this->getContainer()->get('doctrine')->getManager();
-        for ($i = 0; $i < $count; $i++ ) {
-            $product = new Product();
-            $product->setName('Product '.$i);
-            $product->setPrice(rand(10,100));
-            $product->setDescription('lorem');
-            $product->setAuthor($this->currentUser);
-            $em->persist($product);
-        }
-        $em->flush();
+        $this->createProducts($count, $this->currentUser);
     }
 
     /**
-     * @When I click :linkText
+     * @Given the following product(s) exist(s):
      */
-    public function iClick($linkText)
+    public function theFollowingProductsExist(TableNode $table)
     {
-        $this->getSession()->getPage()->clickLink($linkText);
+        foreach ($table as $row) {
+            $product = new Product();
+            $product->setName($row['name']);
+            $product->setPrice(rand(10, 1000));
+            $product->setDescription('lorem');
+
+            if (isset($row['is published']) && $row['is published'] == 'yes') {
+                $product->setIsPublished(true);
+            }
+
+            $this->getEntityManager()->persist($product);
+        }
+
+        $this->getEntityManager()->flush();
+    }
+
+    /**
+     * @Then the :rowText row should have a check mark
+     */
+    public function theProductRowShouldShowAsPublished($rowText)
+    {
+        $row = $this->findRowByText($rowText);
+
+        assertContains('fa-check', $row->getHtml(), 'Could not find the fa-check element in the row!');
+    }
+
+    /**
+     * @When I press :linkText in the :rowText row
+     */
+    public function iClickInTheRow($linkText, $rowText)
+    {
+        $this->findRowByText($rowText)->pressButton($linkText);
+    }
+
+    /**
+     * @When I click :linkName
+     */
+    public function iClick($linkName)
+    {
+        $this->getPage()->clickLink($linkName);
     }
 
     /**
@@ -133,25 +160,103 @@ class FeatureContext extends \Behat\MinkExtension\Context\MinkContext implements
      */
     public function iShouldSeeProducts($count)
     {
-        $table = $this->getSession()->getPage()->find('css', 'table.table');
-        assertNotNull($table, 'could not find a table');
-        assertCount(intval($count), $table->findAll('css', 'tbody tr'));
+        $table = $this->getPage()->find('css', 'table.table');
+        assertNotNull($table, 'Cannot find a table!');
 
+        assertCount(intval($count), $table->findAll('css', 'tbody tr'));
     }
 
     /**
-     * @Given I login as an admin
+     * @Given I am logged in as an admin
      */
-    public function iLoginAsAnAdmin()
+    public function iAmLoggedInAsAnAdmin()
     {
-        $this->currentUser = $this->thereIsAnAdminUserWithPassword('admin', 'admin');
-        $this->visitPath('/login');
-        $this->getSession()->getPage()->findField('Username')->setValue('admin');
-        $this->getSession()->getPage()->findField('Password')->setValue('admin');
-        $this->getSession()->getPage()->pressButton('Login');
+        $this->currentUser = $this->thereIsAUserWithPassword('admin', 'admin');
 
+        $this->visitPath('/login');
+        $this->getPage()->fillField('Username', 'admin');
+        $this->getPage()->fillField('Password', 'admin');
+        $this->getPage()->pressButton('Login');
     }
 
+    /**
+     * @When I wait for the modal to load
+     */
+    public function iWaitForTheModalToLoad()
+    {
+        $this->getSession()->wait(
+            5000,
+            "$('.modal:visible').length > 0"
+        );
+    }
 
+    /**
+     * Pauses the scenario until the user presses a key. Useful when debugging a scenario.
+     *
+     * @Then (I )break
+     */
+    public function iPutABreakpoint()
+    {
+        fwrite(STDOUT, "\033[s    \033[93m[Breakpoint] Press \033[1;93m[RETURN]\033[0;93m to continue...\033[0m");
+        while (fgets(STDIN, 1024) == '') {}
+        fwrite(STDOUT, "\033[u");
+        return;
+    }
 
+    /**
+     * Saving a screenshot
+     *
+     * @When I save a screenshot to :filename
+     */
+    public function iSaveAScreenshotIn($filename)
+    {
+        sleep(1);
+        $this->saveScreenshot($filename, __DIR__.'/../..');
+    }
+
+    /**
+     * @return \Behat\Mink\Element\DocumentElement
+     */
+    private function getPage()
+    {
+        return $this->getSession()->getPage();
+    }
+
+    /**
+     * @return \Doctrine\ORM\EntityManager
+     */
+    private function getEntityManager()
+    {
+        return $this->getContainer()->get('doctrine.orm.entity_manager');
+    }
+
+    private function createProducts($count, User $author = null)
+    {
+        for ($i = 0; $i < $count; $i++) {
+            $product = new Product();
+            $product->setName('Product '.$i);
+            $product->setPrice(rand(10, 1000));
+            $product->setDescription('lorem');
+
+            if ($author) {
+                $product->setAuthor($author);
+            }
+
+            $this->getEntityManager()->persist($product);
+        }
+
+        $this->getEntityManager()->flush();
+    }
+
+    /**
+     * @param $rowText
+     * @return \Behat\Mink\Element\NodeElement
+     */
+    private function findRowByText($rowText)
+    {
+        $row = $this->getPage()->find('css', sprintf('table tr:contains("%s")', $rowText));
+        assertNotNull($row, 'Cannot find a table row with this text!');
+
+        return $row;
+    }
 }
